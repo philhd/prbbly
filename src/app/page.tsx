@@ -45,14 +45,14 @@ export default function HomePage() {
       // This is hypothetical structure if Chat Completions returned logprobs.
 
       const choice = data.result?.choices?.[0];
-      if (choice?.logprobs && choice.logprobs.tokens && choice.logprobs.top_logprobs) {
-        const { tokens: tokenList, top_logprobs: topLogProbsList } = choice.logprobs;
+      if (choice?.logprobs && choice.logprobs.content) {
+        const tokenList = choice.logprobs.content;
 
         // Construct array of token + top_logprobs
         const tokenData = tokenList.map(
-          (token: string, index: number) => ({
-            token,
-            topLogProbs: topLogProbsList[index],
+          (item: any) => ({
+            token: item.token,
+            topLogProbs: item.top_logprobs,
           })
         );
 
