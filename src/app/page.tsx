@@ -8,7 +8,7 @@ export default function HomePage() {
   const [topP, setTopP] = useState(1.0);
   const [loading, setLoading] = useState(false);
   const [tokens, setTokens] = useState<
-    { token: string; topLogProbs: Record<string, number> }[]
+    { token: string; topLogProbs: any }[]
   >([]);
 
   const handlePlay = async () => {
@@ -84,7 +84,7 @@ export default function HomePage() {
         </label>
         <textarea
           id="prompt"
-          className="w-full p-2 border border-gray-300 rounded"
+          className="w-full p-2 text-black border border-gray-300 rounded"
           rows={4}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -148,13 +148,13 @@ export default function HomePage() {
 
           return (
             <div key={idx} className="p-3 bg-white rounded shadow">
-              <div className="font-bold mb-2">Token: <span className="text-blue-600">{token}</span></div>
-              {sorted.slice(0, 10).map(([candidateToken, logP], i) => {
-                const percentage = logProbToPercent(logP);
+              <div className="font-bold text-black mb-2">Token: <span className="text-blue-600">{token}</span></div>
+              {sorted.slice(0, 10).map(([index, logP], i) => {
+                const percentage = logProbToPercent(logP.logprob);
                 return (
                   <div key={i} className="flex items-center mb-1">
-                    <div className="w-1/5 text-sm whitespace-nowrap overflow-hidden overflow-ellipsis pr-2">
-                      {candidateToken.replace(/\n/g, "\\n")}
+                    <div className="w-1/5 text-sm text-black whitespace-nowrap overflow-hidden overflow-ellipsis pr-2">
+                      {logP.token.replace(/\n/g, "\\n")}
                     </div>
                     <div className="flex-1 bg-gray-200 h-4 rounded">
                       <div
@@ -162,7 +162,7 @@ export default function HomePage() {
                         style={{ width: `${percentage.toFixed(2)}%` }}
                       />
                     </div>
-                    <div className="w-16 text-right text-sm pl-2">
+                    <div className="w-16 text-black  text-right text-sm pl-2">
                       {percentage.toFixed(2)}%
                     </div>
                   </div>
