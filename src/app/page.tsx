@@ -7,9 +7,10 @@ export default function HomePage() {
   const [temperature, setTemperature] = useState(0.7);
   const [topP, setTopP] = useState(1.0);
   const [loading, setLoading] = useState(false);
-  const [tokens, setTokens] = useState<
-    { token: string; topLogProbs: any }[]
-  >([]);
+  const [response, setResponse] = useState("");
+  const [tokens, setTokens] = useState<{ token: string; topLogProbs: any }[]>(
+    []
+  );
 
   const handlePlay = async () => {
     setLoading(true);
@@ -43,18 +44,16 @@ export default function HomePage() {
       // ]
       //
       // This is hypothetical structure if Chat Completions returned logprobs.
-
+      setResponse(data.result?.choices?.[0].message.content);
       const choice = data.result?.choices?.[0];
       if (choice?.logprobs && choice.logprobs.content) {
         const tokenList = choice.logprobs.content;
 
         // Construct array of token + top_logprobs
-        const tokenData = tokenList.map(
-          (item: any) => ({
-            token: item.token,
-            topLogProbs: item.top_logprobs,
-          })
-        );
+        const tokenData = tokenList.map((item: any) => ({
+          token: item.token,
+          topLogProbs: item.top_logprobs,
+        }));
 
         setTokens(tokenData);
       } else {
@@ -136,6 +135,16 @@ export default function HomePage() {
         </button>
       </div>
 
+      {/* Response */}
+      <div>
+        {response && (
+          <div>
+            <div className="block font-medium">Response:</div>
+            <div>{response}</div>
+          </div>
+        )}
+      </div>
+
       {/* Tokens + Probabilities Visualization */}
       <div className="space-y-4">
         {tokens.map(({ token, topLogProbs }, idx) => {
@@ -148,7 +157,9 @@ export default function HomePage() {
 
           return (
             <div key={idx} className="p-3 bg-white rounded shadow">
-              <div className="font-bold text-black mb-2">Token: <span className="text-blue-600">{token}</span></div>
+              <div className="font-bold text-black mb-2">
+                Token: <span className="text-blue-600">{token}</span>
+              </div>
               {sorted.slice(0, 10).map(([index, logP], i) => {
                 const percentage = logProbToPercent(logP.logprob);
                 return (
