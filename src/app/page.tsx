@@ -1,101 +1,177 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState } from "react";
+
+export default function HomePage() {
+  const [prompt, setPrompt] = useState("");
+  const [temperature, setTemperature] = useState(0.7);
+  const [topP, setTopP] = useState(1.0);
+  const [loading, setLoading] = useState(false);
+  const [tokens, setTokens] = useState<
+    { token: string; topLogProbs: Record<string, number> }[]
+  >([]);
+
+  const handlePlay = async () => {
+    setLoading(true);
+    setTokens([]);
+    try {
+      const res = await fetch("/api/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt, temperature, top_p: topP }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        console.error("Error from API:", data.error);
+        setLoading(false);
+        return;
+      }
+
+      // The hypothetical data shape from Chat Completions with logprobs
+      //
+      // For the older Completions endpoint, you'd see something like:
+      // data.result.choices[0].logprobs.tokens
+      // data.result.choices[0].logprobs.top_logprobs
+      //
+      // We'll assume the shape is:
+      // data.result.choices[0].logprobs.tokens => [ "Hello", " world", ... ]
+      // data.result.choices[0].logprobs.top_logprobs => [
+      //   { "Hello": -0.1, "Goodbye": -1.2, ... }, { " world": -0.05, ...}, ...
+      // ]
+      //
+      // This is hypothetical structure if Chat Completions returned logprobs.
+
+      const choice = data.result?.choices?.[0];
+      if (choice?.logprobs && choice.logprobs.tokens && choice.logprobs.top_logprobs) {
+        const { tokens: tokenList, top_logprobs: topLogProbsList } = choice.logprobs;
+
+        // Construct array of token + top_logprobs
+        const tokenData = tokenList.map(
+          (token: string, index: number) => ({
+            token,
+            topLogProbs: topLogProbsList[index],
+          })
+        );
+
+        setTokens(tokenData);
+      } else {
+        console.log("No logprobs found in response.");
+      }
+    } catch (err) {
+      console.error("Request failed", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Utility to convert log probability to percentage
+  const logProbToPercent = (logProb: number) => {
+    // e^logProb = probability
+    return Math.exp(logProb) * 100; // scale to 0-100%
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="p-6 max-w-3xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold">OpenAI LogProbs Demo</h1>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      {/* Prompt Input */}
+      <div className="space-y-2">
+        <label htmlFor="prompt" className="block font-medium">
+          Prompt
+        </label>
+        <textarea
+          id="prompt"
+          className="w-full p-2 border border-gray-300 rounded"
+          rows={4}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+        />
+      </div>
+
+      {/* Temperature Slider */}
+      <div>
+        <label htmlFor="temperature" className="block font-medium">
+          Temperature: {temperature.toFixed(2)}
+        </label>
+        <input
+          id="temperature"
+          type="range"
+          min={0}
+          max={2}
+          step={0.01}
+          value={temperature}
+          onChange={(e) => setTemperature(Number(e.target.value))}
+          className="w-full"
+        />
+      </div>
+
+      {/* Top_p Slider */}
+      <div>
+        <label htmlFor="topP" className="block font-medium">
+          Top_p: {topP.toFixed(2)}
+        </label>
+        <input
+          id="topP"
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={topP}
+          onChange={(e) => setTopP(Number(e.target.value))}
+          className="w-full"
+        />
+      </div>
+
+      {/* Play Button */}
+      <div>
+        <button
+          onClick={handlePlay}
+          className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400"
+          disabled={loading}
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          {loading ? "Loading..." : "Play"}
+        </button>
+      </div>
+
+      {/* Tokens + Probabilities Visualization */}
+      <div className="space-y-4">
+        {tokens.map(({ token, topLogProbs }, idx) => {
+          // Sort topLogProbs by descending probability
+          const sorted = Object.entries(topLogProbs).sort((a, b) => {
+            const probA = Math.exp(a[1]);
+            const probB = Math.exp(b[1]);
+            return probB - probA; // descending
+          });
+
+          return (
+            <div key={idx} className="p-3 bg-white rounded shadow">
+              <div className="font-bold mb-2">Token: <span className="text-blue-600">{token}</span></div>
+              {sorted.slice(0, 10).map(([candidateToken, logP], i) => {
+                const percentage = logProbToPercent(logP);
+                return (
+                  <div key={i} className="flex items-center mb-1">
+                    <div className="w-1/5 text-sm whitespace-nowrap overflow-hidden overflow-ellipsis pr-2">
+                      {candidateToken.replace(/\n/g, "\\n")}
+                    </div>
+                    <div className="flex-1 bg-gray-200 h-4 rounded">
+                      <div
+                        className="bg-green-500 h-4 rounded"
+                        style={{ width: `${percentage.toFixed(2)}%` }}
+                      />
+                    </div>
+                    <div className="w-16 text-right text-sm pl-2">
+                      {percentage.toFixed(2)}%
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
