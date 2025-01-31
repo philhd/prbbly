@@ -14,3 +14,6 @@ This is a playground for getting an LLM to show you what it's doing with token o
 
 ### Debugging the back-end
 Run `npm run devslow` instead of `npm run dev`. This will run without turbopack.
+
+## Example
+![image](https://github.com/user-attachments/assets/742a0a19-379f-45d8-b225-9153a88fd8d0)
